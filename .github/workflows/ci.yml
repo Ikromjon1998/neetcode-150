@@ -72,9 +72,6 @@ jobs:
         run: |
           python3 tools/solutions.py apply --force
           npm run build --workspace @neetcode/core
-          # See the note in the Makefile's verify-solutions target: jest's transform cache
-          # can serve a stale module when the mapped source is rewritten in the same second.
-          (cd apps/api-node && npx jest --clearCache)
 
       - name: Python
         run: |
