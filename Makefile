@@ -172,6 +172,11 @@ verify-solutions: ## Apply every reference answer, run the full suite, then rest
 	@echo "Applying reference solutions (your files are backed up)..."
 	@$(PY) tools/solutions.py apply --force >/dev/null
 	@npm run build --workspace @neetcode/core >/dev/null
+	@# Jest maps @neetcode/core straight at packages/core-ts/src, which `apply` just
+	@# rewrote. Its transform cache keys on mtime as well as content, and on a filesystem
+	@# with one-second mtime granularity a rewrite inside the same second can serve a stale
+	@# module — an intermittent single-test failure with no obvious cause. Clearing is cheap.
+	@cd apps/api-node && npx jest --clearCache >/dev/null 2>&1
 	@$(MAKE) test; status=$$?; \
 	 echo "Restoring your files..."; \
 	 $(PY) tools/solutions.py restore >/dev/null; \
