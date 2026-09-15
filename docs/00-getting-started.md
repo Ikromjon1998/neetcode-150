@@ -142,12 +142,29 @@ packages/core-ts/src/arrays-and-hashing/two-sum.ts
 packages/core-php/src/ArraysAndHashing/TwoSum.php
 ```
 
-Then:
+Then, in a second terminal, the loop:
 
 ```bash
-make test-python        # fastest feedback while you work
-make test               # all six suites once you have all three
+make try SLUG=two-sum
 ```
+
+```
+1. Two Sum  (two-sum)
+brief: docs/problems/0001-two-sum.md
+
+  python      fail  20 failed, 229 deselected in 0.04s
+  -> still a stub — that is the exercise
+     edit: packages/core-python/src/neetcode_core/arrays_and_hashing/two_sum.py
+  typescript  fail  20 failed (20)
+  php         fail  Tests: 20, Assertions: 2, Errors: 18, Failures: 2.
+```
+
+It runs only this problem, in all three languages, in about a second. Add `LANG=python` to
+narrow it further while you are mid-thought. When all three go green it tells you so, and
+points at the write-up to compare against.
+
+`make test` runs all six suites for every problem — useful before a commit, too slow for the
+loop.
 
 Stuck? `make show SLUG=two-sum` prints a worked answer without touching a file.
 
