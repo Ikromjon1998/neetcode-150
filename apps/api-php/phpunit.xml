@@ -4,10 +4,16 @@
          bootstrap="vendor/autoload.php"
          colors="true"
 >
+    <!--
+        Feature only. Every test in this app drives the real HTTP stack; the algorithms are
+        unit-tested in packages/core-php, which has its own suite.
+
+        There is deliberately no <testsuite name="Unit"> pointing at tests/Unit: git does not
+        track empty directories, so on a fresh clone that path would not exist, and PHPUnit
+        responds by aborting with "Test directory not found" — running zero tests and still
+        exiting 0. A silently green suite is worse than a red one.
+    -->
     <testsuites>
-        <testsuite name="Unit">
-            <directory>tests/Unit</directory>
-        </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>

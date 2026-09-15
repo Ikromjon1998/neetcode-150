@@ -52,9 +52,16 @@ setup-node: ## npm install (workspaces) and build the core library
 	npm run build --workspace @neetcode/core
 
 .PHONY: setup-php
-setup-php: ## composer install for the core package and the Laravel app
+setup-php: ## composer install for the core package and the Laravel app, + Laravel's .env
 	cd packages/core-php && composer install --no-interaction
 	cd apps/api-php && composer install --no-interaction
+	@# Laravel needs a .env with an APP_KEY before artisan will serve. `composer
+	@# create-project` normally does this via post-create-project-cmd, which this repo does
+	@# not ship — a clone is not a create-project, so it has to happen here.
+	@test -f apps/api-php/.env || { \
+		cp apps/api-php/.env.example apps/api-php/.env; \
+		cd apps/api-php && php artisan key:generate --ansi; \
+	}
 
 # ---------------------------------------------------------------------------- test
 
@@ -86,6 +93,11 @@ test-php: ## phpunit: core package + Laravel app
 	cd packages/core-php && ./vendor/bin/phpunit
 	@echo "--- php: api ---"
 	cd apps/api-php && php artisan test
+
+.PHONY: try
+try: ## THE LOOP: run one problem in all three languages. SLUG=two-sum [LANG=python]
+	@test -n "$(SLUG)" || { echo "Usage: make try SLUG=two-sum [LANG=python|typescript|php]"; exit 1; }
+	@$(PY) tools/try_problem.py $(SLUG) $(if $(LANG),--lang $(LANG),) || true
 
 .PHONY: test-contracts
 test-contracts: ## Validate every contract file against the JSON schema

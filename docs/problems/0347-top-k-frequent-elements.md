@@ -48,9 +48,11 @@ difference between the three.
 ## Check your work
 
 ```bash
-make test-python      # or -node / -php
-make test             # all six suites
+make try SLUG=top-k-frequent-elements          # just this problem, all three languages
+make try SLUG=top-k-frequent-elements LANG=python   # just one language
 ```
+
+That is the loop. `make test` runs all six suites for every problem when you want it.
 
 Every test is driven by the contract above, so the same cases run in all three languages.
 There is also a differential test asserting that your approaches agree with each other —
