@@ -1,0 +1,125 @@
+name: CI
+
+# This repo ships exercises, not answers, so CI checks two opposite things:
+#
+#   exercises  — every live file in packages/core-* is still an unsolved stub
+#   solutions  — the reference answers under solutions/ still make all six suites green
+#
+# The second job is what stops reference answers rotting as contracts grow.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Contracts & exercises
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Contracts are valid and implemented in all three languages
+        run: python3 tools/validate_contracts.py
+
+      - name: Every live file is still an unsolved stub
+        run: python3 tools/solutions.py status --assert-stubs
+
+      - name: Problem briefs are up to date with the contracts
+        run: |
+          python3 tools/render_statements.py
+          git diff --exit-code docs/problems/ \
+            || { echo "::error::docs/problems is stale — run 'make statements' and commit"; exit 1; }
+
+  solutions:
+    name: Reference solutions still pass
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, json
+          coverage: none
+
+      - name: Install
+        run: |
+          pip install -e "packages/core-python[dev]" -e "apps/api-python[dev]"
+          npm ci
+          npm run build --workspace @neetcode/core
+          (cd packages/core-php && composer install --no-interaction --prefer-dist)
+          (cd apps/api-php && composer install --no-interaction --prefer-dist && cp .env.example .env && php artisan key:generate)
+
+      # The checkout is disposable here, so apply the answers in place rather than
+      # backing up and restoring.
+      - name: Apply reference solutions
+        run: |
+          python3 tools/solutions.py apply --force
+          npm run build --workspace @neetcode/core
+
+      - name: Python
+        run: |
+          (cd packages/core-python && pytest -q)
+          (cd apps/api-python && pytest -q)
+      - name: TypeScript
+        run: |
+          npm run test --workspace @neetcode/core
+          npm run test --workspace @neetcode/api-node
+      - name: PHP
+        run: |
+          (cd packages/core-php && ./vendor/bin/phpunit)
+          (cd apps/api-php && php artisan test)
+
+  quality:
+    name: Lint & types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, json
+          coverage: none
+
+      - name: Install
+        run: |
+          pip install -e "packages/core-python[dev]" -e "apps/api-python[dev]"
+          npm ci
+          npm run build --workspace @neetcode/core
+          (cd apps/api-php && composer install --no-interaction --prefer-dist)
+
+      # Linting runs against the STUBS, so the exercises themselves stay clean.
+      - name: Python
+        run: |
+          ruff check packages/core-python apps/api-python
+          (cd packages/core-python && mypy)
+      - name: TypeScript
+        run: |
+          npx tsc --noEmit -p packages/core-ts/tsconfig.json
+          npx tsc --noEmit -p apps/api-node/tsconfig.json
+      - name: PHP
+        run: (cd apps/api-php && ./vendor/bin/pint --test)
